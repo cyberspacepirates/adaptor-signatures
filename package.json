@@ -1,0 +1,24 @@
+{
+  "name": "adaptorsignaturebitcoin",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@noble/hashes": "2.0.0-beta.3",
+    "@noble/secp256k1": "1.6.3",
+    "create-hash": "^1.2.0",
+    "ecpair": "2.1.0"
+  },
+  "devDependencies": {
+    "@types/create-hash": "^1.2.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
