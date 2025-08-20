@@ -72,7 +72,6 @@ describe("Adaptor signature", () => {
       const signer = ecc.randomBytes();
 
       const nonce = ecc.randomBytes();
-
       const { secret, adaptorPoint } = AdaptorSignature.createSecret();
 
       const fullSig = AdaptorSignature.createFullSignature(

@@ -1,5 +1,5 @@
 import { schnorr } from "./schnorr";
-import { abytes, bytesToNumberBE } from "./utils";
+import { abytes, bytesToNumberBE, numberToBytesBE } from "./utils";
 const { schnorrGetExtPubKey, challenge, num } = schnorr.internals;
 const { taggedHash, lift_x, pointToBytes } = schnorr.utils;
 import ecc from "../src/noble_ecc";
@@ -50,7 +50,6 @@ export class AdaptorSignature {
     );
     // console.log(R_prime.length);
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
-
     const sig = new Uint8Array(96); // Let sig = bytes(R) || bytes((k + ed) mod n).
     sig.set(adaptorPoint, 0);
     sig.set(R_prime, 32);
@@ -126,16 +125,15 @@ export class AdaptorSignature {
     message: Buffer,
     auxRand: Uint8Array = randomBytes()
   ) {
-    const m = abytes(message, undefined)!;
+    const m = abytes(message, undefined, "message")!;
     const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
     const rand = Signature.generateNonce(auxRand, privateKey, m); // Let rand = hash/nonce(t || bytes(P) || m)
     // Let k' = int(rand) mod n. Fail if k' = 0. Let R = k'⋅G
     const { scalar: k } = schnorrGetExtPubKey(rand);
-    const commitPoint = lift_x(num(adaptorPoint));
+    const R_prime = pointToBytes(
+      BASE.multiplyUnsafe(k).add(lift_x(num(adaptorPoint)))
+    );
 
-    const R_prime = pointToBytes(BASE.multiply(k).add(commitPoint));
-
-    // console.log(R_prime.length);
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
     const sig = new Uint8Array(96); // Let sig = bytes(R) || bytes((k + ed) mod n).
     sig.set(adaptorPoint, 0);
