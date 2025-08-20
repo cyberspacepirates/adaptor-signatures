@@ -1,6 +1,6 @@
 import { schnorr } from "./schnorr";
 import { abytes, bytesToNumberBE, numberToBytesBE } from "./utils";
-const { schnorrGetExtPubKey, challenge, num } = schnorr.internals;
+const { schnorrGetExtPubKey, challenge, num, hasEven } = schnorr.internals;
 const { taggedHash, lift_x, pointToBytes } = schnorr.utils;
 import ecc from "../src/noble_ecc";
 const randomBytes = ecc.randomBytes;
@@ -45,11 +45,13 @@ export class AdaptorSignature {
     const rand = Signature.generateNonce(auxRand, privateKey, m); // Let rand = hash/nonce(t || bytes(P) || m)
     // Let k' = int(rand) mod n. Fail if k' = 0. Let R = k'⋅G
     const { scalar: k } = schnorrGetExtPubKey(rand);
+    const r_t = Fn.create(k + t);
     const { bytes: R_prime, scalar: r_prime } = schnorrGetExtPubKey(
-      Fn.toBytes(Fn.create(k + t))
+      Fn.toBytes(r_t)
     );
-    // console.log(R_prime.length);
+
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
+
     const sig = new Uint8Array(96); // Let sig = bytes(R) || bytes((k + ed) mod n).
     sig.set(adaptorPoint, 0);
     sig.set(R_prime, 32);
@@ -130,9 +132,10 @@ export class AdaptorSignature {
     const rand = Signature.generateNonce(auxRand, privateKey, m); // Let rand = hash/nonce(t || bytes(P) || m)
     // Let k' = int(rand) mod n. Fail if k' = 0. Let R = k'⋅G
     const { scalar: k } = schnorrGetExtPubKey(rand);
-    const R_prime = pointToBytes(
-      BASE.multiplyUnsafe(k).add(lift_x(num(adaptorPoint)))
-    );
+
+    let r_t = BASE.multiply(k).add(lift_x(num(adaptorPoint)));
+
+    const R_prime = pointToBytes(r_t);
 
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
     const sig = new Uint8Array(96); // Let sig = bytes(R) || bytes((k + ed) mod n).
@@ -140,5 +143,29 @@ export class AdaptorSignature {
     sig.set(R_prime, 32);
     sig.set(Fn.toBytes(Fn.create(k + e * d)), 64);
     return sig;
+  }
+
+  static getPerfectNonce(
+    adaptorPoint: Uint8Array,
+    privateKey: Uint8Array,
+    message: Buffer
+  ): Uint8Array {
+    const auxRand = randomBytes();
+    const m = abytes(message, undefined, "message")!;
+    const rand = Signature.generateNonce(auxRand, privateKey, m); // Let rand = hash/nonce(t || bytes(P) || m)
+    // Let k' = int(rand) mod n. Fail if k' = 0. Let R = k'⋅G
+    const { scalar: k } = schnorrGetExtPubKey(rand);
+
+    let r_t = BASE.multiply(k).add(lift_x(num(adaptorPoint)));
+
+    if (!hasEven(r_t.y)) {
+      return AdaptorSignature.getPerfectNonce(
+        adaptorPoint,
+        privateKey,
+        message
+      );
+    }
+
+    return auxRand;
   }
 }

@@ -67,12 +67,12 @@ describe("Adaptor signature", () => {
     }
   });
 
-  for (let i = 0; i < 50; i++) {
-    it(`${i} - Commiting to a Adaptor point`, () => {
+  it(`Commiting to a Adaptor point`, () => {
+    for (let i = 0; i < 50; i++) {
       const signer = ecc.randomBytes();
-
-      const nonce = ecc.randomBytes();
       const { secret, adaptorPoint } = AdaptorSignature.createSecret();
+
+      const nonce = AdaptorSignature.getPerfectNonce(adaptorPoint, signer, msg);
 
       const fullSig = AdaptorSignature.createFullSignature(
         secret,
@@ -91,6 +91,6 @@ describe("Adaptor signature", () => {
       );
 
       expect(toHex(commitSig)).to.be.equal(toHex(adaptorSig));
-    });
-  }
+    }
+  });
 });
