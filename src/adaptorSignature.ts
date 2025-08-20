@@ -23,6 +23,16 @@ class Signature {
 }
 
 export class AdaptorSignature {
+  static createSecret() {
+    const random = ecc.randomBytes();
+    const { bytes: adaptorPoint, scalar: t } = schnorrGetExtPubKey(random);
+
+    return {
+      adaptorPoint,
+      secret: Fn.toBytes(t),
+    };
+  }
+
   static createFullSignature(
     secret: Uint8Array,
     privateKey: Uint8Array,
@@ -31,27 +41,28 @@ export class AdaptorSignature {
   ) {
     const m = abytes(message, undefined, "message")!;
     const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
-    const { scalar: t } = schnorrGetExtPubKey(secret); // checks for isWithinCurveOrder
+    const { bytes: adaptorPoint, scalar: t } = schnorrGetExtPubKey(secret); // checks for isWithinCurveOrder
     const rand = Signature.generateNonce(auxRand, privateKey, m); // Let rand = hash/nonce(t || bytes(P) || m)
     // Let k' = int(rand) mod n. Fail if k' = 0. Let R = k'⋅G
     const { scalar: k } = schnorrGetExtPubKey(rand);
     const { bytes: R_prime, scalar: r_prime } = schnorrGetExtPubKey(
       Fn.toBytes(Fn.create(k + t))
     );
-
     // console.log(R_prime.length);
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
 
-    const sig = new Uint8Array(64); // Let sig = bytes(R) || bytes((k + ed) mod n).
-    sig.set(R_prime, 0);
-    sig.set(Fn.toBytes(Fn.create(r_prime + e * d)), 32);
+    const sig = new Uint8Array(96); // Let sig = bytes(R) || bytes((k + ed) mod n).
+    sig.set(adaptorPoint, 0);
+    sig.set(R_prime, 32);
+    sig.set(Fn.toBytes(Fn.create(r_prime + e * d)), 64);
     return sig;
   }
 
   static fromSecret(fullSignature: Uint8Array, secret: Uint8Array) {
-    const [nonce, fullSig] = [
+    const [adaptorPoint, nonce, fullSig] = [
       fullSignature.subarray(0, 32),
       fullSignature.subarray(32, 64),
+      fullSignature.subarray(64, 96),
     ];
 
     const s = num(fullSig);
@@ -59,9 +70,10 @@ export class AdaptorSignature {
 
     const auxSig = Fn.toBytes(Fn.create(s - t));
 
-    const sig = new Uint8Array(64);
-    sig.set(nonce, 0);
-    sig.set(auxSig, 32);
+    const sig = new Uint8Array(96);
+    sig.set(adaptorPoint, 0);
+    sig.set(nonce, 32);
+    sig.set(auxSig, 64);
     return sig;
   }
 
@@ -69,8 +81,8 @@ export class AdaptorSignature {
     adaptorSignature: Uint8Array,
     secret: Uint8Array
   ) {
-    const R_prime = adaptorSignature.subarray(0, 32);
-    const adaptorSig = adaptorSignature.subarray(32, 64);
+    const R_prime = adaptorSignature.subarray(32, 64);
+    const adaptorSig = adaptorSignature.subarray(64, 96);
     const s = num(adaptorSig);
     const t = num(secret);
 
@@ -82,11 +94,22 @@ export class AdaptorSignature {
     return fullSig;
   }
 
+  /***
+   * Takes a 96 byte signture and returns 64 byte signature
+   **/
+  static to64Sig(signature: Uint8Array) {
+    let _sig = signature;
+    if (_sig.length == 96) {
+      _sig = _sig.slice(32);
+    }
+    return _sig;
+  }
+
   static extractSecret(
     adaptorSignature: Uint8Array,
     fullSignature: Uint8Array
   ) {
-    const adaptorSig = adaptorSignature.subarray(32, 64);
+    const adaptorSig = adaptorSignature.subarray(64, 96);
     const fullSig = fullSignature.subarray(32, 64);
 
     const s = num(fullSig);
@@ -114,10 +137,10 @@ export class AdaptorSignature {
 
     // console.log(R_prime.length);
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
-    const sig = new Uint8Array(64); // Let sig = bytes(R) || bytes((k + ed) mod n).
-    sig.set(R_prime, 0);
-    sig.set(Fn.toBytes(Fn.create(k + e * d)), 32);
-
+    const sig = new Uint8Array(96); // Let sig = bytes(R) || bytes((k + ed) mod n).
+    sig.set(adaptorPoint, 0);
+    sig.set(R_prime, 32);
+    sig.set(Fn.toBytes(Fn.create(k + e * d)), 64);
     return sig;
   }
 }

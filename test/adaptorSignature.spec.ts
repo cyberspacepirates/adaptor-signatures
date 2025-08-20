@@ -3,6 +3,9 @@ import { schnorr } from "../src/schnorr";
 import { AdaptorSignature } from "../src/adaptorSignature";
 import ecc from "../src/noble_ecc";
 
+const { schnorrGetExtPubKey } = schnorr.internals;
+const { Fn } = schnorr.Point;
+
 const toHex = (a: Uint8Array) => Buffer.from(a).toString("hex");
 
 const msg = Buffer.from("Hello world!", "utf8");
@@ -16,7 +19,11 @@ describe("Adaptor signature", () => {
       const fullSig = AdaptorSignature.createFullSignature(secret, signer, msg);
       // verifies if it's a valid bip340 signature
       // s . G = R + T + H(R + T || P || m) . P
-      const verify = schnorr.verify(fullSig, msg, schnorr.getPublicKey(signer));
+      const verify = schnorr.verify(
+        AdaptorSignature.to64Sig(fullSig),
+        msg,
+        schnorr.getPublicKey(signer)
+      );
 
       expect(verify, "should generate a valid signature").to.be.equal(true);
     }
@@ -36,7 +43,9 @@ describe("Adaptor signature", () => {
         secret
       );
 
-      expect(toHex(recoveredFullSig)).to.be.equal(toHex(fullSig));
+      expect(toHex(recoveredFullSig)).to.be.equal(
+        toHex(AdaptorSignature.to64Sig(fullSig))
+      );
     }
   });
 
@@ -51,7 +60,7 @@ describe("Adaptor signature", () => {
 
       const recoveredSecret = AdaptorSignature.extractSecret(
         adaptorSig,
-        fullSig
+        AdaptorSignature.to64Sig(fullSig)
       );
 
       expect(toHex(recoveredSecret)).to.be.equal(toHex(secret));
@@ -62,10 +71,9 @@ describe("Adaptor signature", () => {
     it(`${i} - Commiting to a Adaptor point`, () => {
       const signer = ecc.randomBytes();
 
-      const secret = ecc.randomBytes();
-      const adaptorPoint = schnorr.getPublicKey(secret);
-
       const nonce = ecc.randomBytes();
+
+      const { secret, adaptorPoint } = AdaptorSignature.createSecret();
 
       const fullSig = AdaptorSignature.createFullSignature(
         secret,
