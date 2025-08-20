@@ -93,4 +93,53 @@ describe("Adaptor signature", () => {
       expect(toHex(commitSig)).to.be.equal(toHex(adaptorSig));
     }
   });
+
+  it(`Swapping - Alice and Bob`, () => {
+    for (let i = 0; i < 50; i++) {
+      const signer = ecc.randomBytes();
+      const watcher = ecc.randomBytes();
+
+      const { secret, adaptorPoint } = AdaptorSignature.createSecret();
+
+      // Alice the signer creates a signature
+      const fullSig = AdaptorSignature.createFullSignature(secret, signer, msg);
+
+      // then the signer creates an adaptor signature and sends to Bob
+      const adaptorSig = AdaptorSignature.fromSecret(fullSig, secret);
+
+      // watcher creates a commitment to Adaptor Point and sends to signer
+      const nonce = AdaptorSignature.getPerfectNonce(
+        adaptorPoint,
+        watcher,
+        msg
+      );
+
+      const commitSig = AdaptorSignature.fromAdaptorPoint(
+        adaptorPoint,
+        watcher,
+        msg,
+        nonce
+      );
+
+      // signer broadcast the transaction
+      // watcher extracts the secret
+      const recoveredSecret = AdaptorSignature.extractSecret(
+        adaptorSig,
+        AdaptorSignature.to64Sig(fullSig)
+      );
+
+      expect(toHex(recoveredSecret)).to.be.equal(toHex(secret));
+
+      // now signer broadcast watcher's commit transaction
+      const bip340CommitSig = AdaptorSignature.extractFullSignature(
+        commitSig,
+        secret
+      );
+
+      expect(
+        schnorr.verify(bip340CommitSig, msg, schnorr.getPublicKey(watcher)),
+        "the commit to adaptor point + secret should be valid transaction"
+      ).to.true;
+    }
+  });
 });
