@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { schnorr } from "../src/schnorr";
 import { AdaptorSignature } from "../src/adaptorSignature";
-import ecc from "../src/noble_ecc";
+import { randomBytes } from "../src/utils";
 
 const { schnorrGetExtPubKey } = schnorr.internals;
 const { Fn } = schnorr.Point;
@@ -13,8 +13,8 @@ const msg = Buffer.from("Hello world!", "utf8");
 describe("Adaptor signature", () => {
   it("Generating BIP340 valid signatures with secret", () => {
     for (let i = 0; i < 50; i++) {
-      const signer = ecc.randomBytes();
-      const secret = ecc.randomBytes();
+      const signer = randomBytes();
+      const secret = randomBytes();
       // s = r + t + H(R + T || P || m) . p
       const fullSig = AdaptorSignature.createFullSignature(secret, signer, msg);
       // verifies if it's a valid bip340 signature
@@ -31,8 +31,8 @@ describe("Adaptor signature", () => {
 
   it(`Generating adaptor signatures by subtracting the secret`, () => {
     for (let i = 0; i < 50; i++) {
-      const signer = ecc.randomBytes();
-      const secret = ecc.randomBytes();
+      const signer = randomBytes();
+      const secret = randomBytes();
       // s = r + t + H(R + T || P || m) . p
       const fullSig = AdaptorSignature.createFullSignature(secret, signer, msg);
       // s' = s - t
@@ -51,8 +51,8 @@ describe("Adaptor signature", () => {
 
   it("Extracting the secret with bip340 signature and adaptor signature", () => {
     for (let i = 0; i < 50; i++) {
-      const signer = ecc.randomBytes();
-      const secret = ecc.randomBytes();
+      const signer = randomBytes();
+      const secret = randomBytes();
 
       const fullSig = AdaptorSignature.createFullSignature(secret, signer, msg);
 
@@ -69,7 +69,7 @@ describe("Adaptor signature", () => {
 
   it(`Commiting to a Adaptor point`, () => {
     for (let i = 0; i < 50; i++) {
-      const signer = ecc.randomBytes();
+      const signer = randomBytes();
       const { secret, adaptorPoint } = AdaptorSignature.createSecret();
 
       const nonce = AdaptorSignature.getPerfectNonce(adaptorPoint, signer, msg);
@@ -96,8 +96,8 @@ describe("Adaptor signature", () => {
 
   it(`Swapping - Alice and Bob`, () => {
     for (let i = 0; i < 50; i++) {
-      const signer = ecc.randomBytes();
-      const watcher = ecc.randomBytes();
+      const signer = randomBytes();
+      const watcher = randomBytes();
 
       const { secret, adaptorPoint } = AdaptorSignature.createSecret();
 

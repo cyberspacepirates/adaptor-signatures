@@ -11,6 +11,13 @@ import {
   hexToBytes as hexToBytes_,
   isBytes as isBytes_,
 } from "@noble/hashes/utils.js";
+
+import * as necc from "@noble/secp256k1";
+
+export function randomBytes(bytes = 32) {
+  return necc.utils.randomBytes(bytes);
+}
+
 export {
   abytes,
   anumber,
@@ -19,9 +26,9 @@ export {
   concatBytes,
   hexToBytes,
   isBytes,
-  randomBytes,
   utf8ToBytes,
 } from "@noble/hashes/utils.js";
+
 const _0n = /* @__PURE__ */ BigInt(0);
 const _1n = /* @__PURE__ */ BigInt(1);
 

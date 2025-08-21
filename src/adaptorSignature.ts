@@ -1,9 +1,7 @@
 import { schnorr } from "./schnorr";
-import { abytes, bytesToNumberBE, numberToBytesBE } from "./utils";
+import { abytes, bytesToNumberBE, randomBytes } from "./utils";
 const { schnorrGetExtPubKey, challenge, num, hasEven } = schnorr.internals;
 const { taggedHash, lift_x, pointToBytes } = schnorr.utils;
-import ecc from "../src/noble_ecc";
-const randomBytes = ecc.randomBytes;
 
 const { Fn, BASE } = schnorr.Point;
 
@@ -24,7 +22,7 @@ class Signature {
 
 export class AdaptorSignature {
   static createSecret() {
-    const random = ecc.randomBytes();
+    const random = randomBytes();
     const { bytes: adaptorPoint, scalar: t } = schnorrGetExtPubKey(random);
 
     return {
