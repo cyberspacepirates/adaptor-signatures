@@ -1,6 +1,7 @@
 import { schnorr } from "./schnorr";
 import { abytes, bytesToNumberBE, randomBytes } from "./utils";
-const { schnorrGetExtPubKey, challenge, num, hasEven } = schnorr.internals;
+const { schnorrGetExtPubKey, challenge, num, hasEven, inRange } =
+  schnorr.internals;
 const { taggedHash, lift_x, pointToBytes } = schnorr.utils;
 
 const { Fn, BASE } = schnorr.Point;
@@ -141,6 +142,38 @@ export class AdaptorSignature {
     sig.set(R_prime, 32);
     sig.set(Fn.toBytes(Fn.create(k + e * d)), 64);
     return sig;
+  }
+
+  static verify(
+    adaptorSignature: Uint8Array,
+    message: Uint8Array,
+    publicKey: Uint8Array
+  ) {
+    const adaptorSig = abytes(adaptorSignature, 96, "signature").subarray(
+      32,
+      96
+    );
+    const adaptorPoint = adaptorSignature.subarray(0, 32);
+    const m = abytes(message, undefined, "message");
+    const pub = abytes(publicKey, 32, "publicKey");
+    try {
+      const P = lift_x(num(pub)); // P = lift_x(int(pk)); fail if that fails
+      const r = num(adaptorSig.subarray(0, 32)); // Let r = int(sig[0:32]); fail if r ≥ p.
+      //if (!inRange(r, _1n, secp256k1_CURVE.p)) return false;
+      const s = num(adaptorSig.subarray(32, 64)); // Let s = int(sig[32:64]); fail if s ≥ n.
+      //if (!inRange(s, _1n, secp256k1_CURVE.n)) return false;
+      const e = challenge(Fn.toBytes(r), pointToBytes(P), m); // int(challenge(bytes(r)||bytes(P)||m))%n
+      // R = s⋅G - e⋅P, where -eP == (n-e)P
+      const R = BASE.multiplyUnsafe(s)
+        .add(lift_x(num(adaptorPoint)))
+        .add(P.multiplyUnsafe(Fn.neg(e)));
+      const { x, y } = R.toAffine();
+      // Fail if is_infinite(R) / not has_even_y(R) / x(R) ≠ r.
+      if (R.is0() || !hasEven(y) || x !== r) return false;
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   static getPerfectNonce(

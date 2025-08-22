@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { schnorr } from "../src/schnorr";
 import { AdaptorSignature } from "../src/adaptorSignature";
 import { randomBytes } from "../src/utils";
+import { sign } from "tiny-secp256k1";
 
 const { schnorrGetExtPubKey } = schnorr.internals;
 const { Fn } = schnorr.Point;
@@ -32,11 +33,25 @@ describe("Adaptor signature", () => {
   it(`Generating adaptor signatures by subtracting the secret`, () => {
     for (let i = 0; i < 50; i++) {
       const signer = randomBytes();
-      const secret = randomBytes();
+      const { adaptorPoint, secret } = AdaptorSignature.createSecret();
+
+      const nonce = AdaptorSignature.getPerfectNonce(adaptorPoint, signer, msg);
+
       // s = r + t + H(R + T || P || m) . p
-      const fullSig = AdaptorSignature.createFullSignature(secret, signer, msg);
+      const fullSig = AdaptorSignature.createFullSignature(
+        secret,
+        signer,
+        msg,
+        nonce
+      );
+
       // s' = s - t
       const adaptorSig = AdaptorSignature.fromSecret(fullSig, secret);
+
+      expect(
+        AdaptorSignature.verify(adaptorSig, msg, schnorr.getPublicKey(signer))
+      ).to.be.true;
+
       // s = s' + t
       const recoveredFullSig = AdaptorSignature.extractFullSignature(
         adaptorSig,
