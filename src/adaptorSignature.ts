@@ -1,7 +1,7 @@
-import { schnorr } from "./schnorr";
-import { abytes, bytesToNumberBE, randomBytes } from "./utils";
-const { schnorrGetExtPubKey, challenge, num, hasEven, inRange } =
-  schnorr.internals;
+import { schnorr } from "schnorr";
+import { abytes, bytesToNumberBE, randomBytes } from "schnorr/utils";
+
+const { schnorrGetExtPubKey, challenge, num, hasEven } = schnorr.internals;
 const { taggedHash, lift_x, pointToBytes } = schnorr.utils;
 
 const { Fn, BASE } = schnorr.Point;
@@ -10,7 +10,7 @@ class Signature {
   static generateNonce(
     auxRand: Uint8Array,
     secretKey: Uint8Array,
-    m: Uint8Array
+    m: Uint8Array,
   ) {
     const { bytes: px, scalar: d } = schnorrGetExtPubKey(secretKey); // checks for isWithinCurveOrder
     const a = abytes(auxRand, 32, "auxRand"); // Auxiliary random data a: a 32-byte array
@@ -36,7 +36,7 @@ export class AdaptorSignature {
     secret: Uint8Array,
     privateKey: Uint8Array,
     message: Buffer,
-    auxRand: Uint8Array = randomBytes()
+    auxRand: Uint8Array = randomBytes(),
   ) {
     const m = abytes(message, undefined, "message")!;
     const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
@@ -46,7 +46,7 @@ export class AdaptorSignature {
     const { scalar: k } = schnorrGetExtPubKey(rand);
     const r_t = Fn.create(k + t);
     const { bytes: R_prime, scalar: r_prime } = schnorrGetExtPubKey(
-      Fn.toBytes(r_t)
+      Fn.toBytes(r_t),
     );
 
     const e = challenge(R_prime, px, m); // Let e = int(hash/challenge(bytes(R) || bytes(P) || m)) mod n.
@@ -79,7 +79,7 @@ export class AdaptorSignature {
 
   static extractFullSignature(
     adaptorSignature: Uint8Array,
-    secret: Uint8Array
+    secret: Uint8Array,
   ) {
     const R_prime = adaptorSignature.subarray(32, 64);
     const adaptorSig = adaptorSignature.subarray(64, 96);
@@ -107,7 +107,7 @@ export class AdaptorSignature {
 
   static extractSecret(
     adaptorSignature: Uint8Array,
-    fullSignature: Uint8Array
+    fullSignature: Uint8Array,
   ) {
     const adaptorSig = adaptorSignature.subarray(64, 96);
     const fullSig = fullSignature.subarray(32, 64);
@@ -124,7 +124,7 @@ export class AdaptorSignature {
     adaptorPoint: Uint8Array,
     privateKey: Uint8Array,
     message: Buffer,
-    auxRand: Uint8Array = randomBytes()
+    auxRand: Uint8Array = randomBytes(),
   ) {
     const m = abytes(message, undefined, "message")!;
     const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
@@ -147,11 +147,11 @@ export class AdaptorSignature {
   static verify(
     adaptorSignature: Uint8Array,
     message: Uint8Array,
-    publicKey: Uint8Array
+    publicKey: Uint8Array,
   ) {
     const adaptorSig = abytes(adaptorSignature, 96, "signature").subarray(
       32,
-      96
+      96,
     );
     const adaptorPoint = adaptorSignature.subarray(0, 32);
     const m = abytes(message, undefined, "message");
@@ -179,7 +179,7 @@ export class AdaptorSignature {
   static getPerfectNonce(
     adaptorPoint: Uint8Array,
     privateKey: Uint8Array,
-    message: Buffer
+    message: Buffer,
   ): Uint8Array {
     const auxRand = randomBytes();
     const m = abytes(message, undefined, "message")!;
@@ -193,7 +193,7 @@ export class AdaptorSignature {
       return AdaptorSignature.getPerfectNonce(
         adaptorPoint,
         privateKey,
-        message
+        message,
       );
     }
 

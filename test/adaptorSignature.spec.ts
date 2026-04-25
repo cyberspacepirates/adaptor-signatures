@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { schnorr } from "../src/schnorr";
+import { schnorr } from "schnorr";
 import { AdaptorSignature } from "../src/adaptorSignature";
-import { randomBytes } from "../src/utils";
-import { sign } from "tiny-secp256k1";
-
-const { schnorrGetExtPubKey } = schnorr.internals;
-const { Fn } = schnorr.Point;
+import { randomBytes } from "schnorr/utils";
 
 const toHex = (a: Uint8Array) => Buffer.from(a).toString("hex");
 
@@ -23,7 +19,7 @@ describe("Adaptor signature", () => {
       const verify = schnorr.verify(
         AdaptorSignature.to64Sig(fullSig),
         msg,
-        schnorr.getPublicKey(signer)
+        schnorr.getPublicKey(signer),
       );
 
       expect(verify, "should generate a valid signature").to.be.equal(true);
@@ -42,24 +38,24 @@ describe("Adaptor signature", () => {
         secret,
         signer,
         msg,
-        nonce
+        nonce,
       );
 
       // s' = s - t
       const adaptorSig = AdaptorSignature.fromSecret(fullSig, secret);
 
       expect(
-        AdaptorSignature.verify(adaptorSig, msg, schnorr.getPublicKey(signer))
+        AdaptorSignature.verify(adaptorSig, msg, schnorr.getPublicKey(signer)),
       ).to.be.true;
 
       // s = s' + t
       const recoveredFullSig = AdaptorSignature.extractFullSignature(
         adaptorSig,
-        secret
+        secret,
       );
 
       expect(toHex(recoveredFullSig)).to.be.equal(
-        toHex(AdaptorSignature.to64Sig(fullSig))
+        toHex(AdaptorSignature.to64Sig(fullSig)),
       );
     }
   });
@@ -75,7 +71,7 @@ describe("Adaptor signature", () => {
 
       const recoveredSecret = AdaptorSignature.extractSecret(
         adaptorSig,
-        AdaptorSignature.to64Sig(fullSig)
+        AdaptorSignature.to64Sig(fullSig),
       );
 
       expect(toHex(recoveredSecret)).to.be.equal(toHex(secret));
@@ -93,7 +89,7 @@ describe("Adaptor signature", () => {
         secret,
         signer,
         msg,
-        nonce
+        nonce,
       );
 
       const adaptorSig = AdaptorSignature.fromSecret(fullSig, secret);
@@ -102,7 +98,7 @@ describe("Adaptor signature", () => {
         adaptorPoint,
         signer,
         msg,
-        nonce
+        nonce,
       );
 
       expect(toHex(commitSig)).to.be.equal(toHex(adaptorSig));
@@ -126,21 +122,21 @@ describe("Adaptor signature", () => {
       const nonce = AdaptorSignature.getPerfectNonce(
         adaptorPoint,
         watcher,
-        msg
+        msg,
       );
 
       const commitSig = AdaptorSignature.fromAdaptorPoint(
         adaptorPoint,
         watcher,
         msg,
-        nonce
+        nonce,
       );
 
       // signer broadcast the transaction
       // watcher extracts the secret
       const recoveredSecret = AdaptorSignature.extractSecret(
         adaptorSig,
-        AdaptorSignature.to64Sig(fullSig)
+        AdaptorSignature.to64Sig(fullSig),
       );
 
       expect(toHex(recoveredSecret)).to.be.equal(toHex(secret));
@@ -148,12 +144,12 @@ describe("Adaptor signature", () => {
       // now signer broadcast watcher's commit transaction
       const bip340CommitSig = AdaptorSignature.extractFullSignature(
         commitSig,
-        secret
+        secret,
       );
 
       expect(
         schnorr.verify(bip340CommitSig, msg, schnorr.getPublicKey(watcher)),
-        "the commit to adaptor point + secret should be valid transaction"
+        "the commit to adaptor point + secret should be valid transaction",
       ).to.true;
     }
   });
